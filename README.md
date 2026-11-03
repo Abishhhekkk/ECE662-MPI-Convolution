@@ -406,3 +406,50 @@ The starter notebook is optional and should only be included if uploaded.
   <br/><br/>
   <sub>Distributed Computing · Parallel Algorithms · Matrix Convolution</sub>
 </p>
+
+## 10 | Technical References
+
+### MPI & Distributed Computing
+
+<p align="center">
+  <a href="https://mpi4py.readthedocs.io/en/stable/">
+    <img src="https://img.shields.io/badge/mpi4py-Documentation-blue?style=for-the-badge" />
+  </a>
+  <a href="https://mpitutorial.com/">
+    <img src="https://img.shields.io/badge/MPI-Tutorial-orange?style=for-the-badge" />
+  </a>
+  <a href="https://www.mpi-forum.org/docs/">
+    <img src="https://img.shields.io/badge/MPI-Standard-green?style=for-the-badge" />
+  </a>
+</p>
+
+### Python & Numerical Computing
+
+<p align="center">
+  <a href="https://numpy.org/doc/stable/">
+    <img src="https://img.shields.io/badge/NumPy-Documentation-013243?style=for-the-badge&logo=numpy" />
+  </a>
+  <a href="https://docs.python.org/3/">
+    <img src="https://img.shields.io/badge/Python-Documentation-blue?style=for-the-badge&logo=python" />
+  </a>
+  <a href="https://ipyparallel.readthedocs.io/en/latest/">
+    <img src="https://img.shields.io/badge/IPyParallel-Documentation-orange?style=for-the-badge" />
+  </a>
+  <a href="https://docs.jupyter.org/">
+    <img src="https://img.shields.io/badge/Jupyter-Documentation-F37626?style=for-the-badge&logo=jupyter" />
+  </a>
+</p>
+
+### Core Concepts
+
+<p align="center">
+  <a href="https://cs231n.github.io/convolutional-networks/">
+    <img src="https://img.shields.io/badge/Convolution-CS231n-red?style=for-the-badge" />
+  </a>
+  <a href="https://hpc.llnl.gov/documentation/tutorials/introduction-parallel-computing-tutorial">
+    <img src="https://img.shields.io/badge/Parallel_Computing-HPC-blue?style=for-the-badge" />
+  </a>
+  <a href="https://docs.conda.io/">
+    <img src="https://img.shields.io/badge/Conda-Documentation-green?style=for-the-badge" />
+  </a>
+</p>
