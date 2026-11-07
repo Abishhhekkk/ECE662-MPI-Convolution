@@ -27,8 +27,9 @@ The implementation uses three MPI processes and demonstrates distributed data ma
 | Component | Implementation |
 |---|---|
 | Parallel framework | MPI |
-| Programming language | Python |
+| Programming language | Python 3.11 |
 | Input distribution | MPI Scatter |
+| Dimension distribution | MPI Broadcast |
 | Kernel distribution | MPI Broadcast |
 | Boundary exchange | MPI Send / Receive |
 | Result aggregation | MPI Gather |
@@ -43,13 +44,14 @@ The input matrix is partitioned row-wise across three processes. Each process pe
 
 ```mermaid
 flowchart TD
-    A["Input Matrix & Kernel"] --> B["Process 0 - Root"]
-    B --> C["Broadcast Dimensions & Kernel"]
-    C --> D["Scatter Input Matrix Rows"]
+    A["9 × 4 Input Matrix & 3 × 3 Kernel"] --> B["Process 0 - Root"]
+    B --> C["Broadcast Dimensions"]
+    C --> D["Broadcast Kernel"]
+    D --> E["Scatter Input Matrix Rows"]
 
-    D --> P0["Process 0"]
-    D --> P1["Process 1"]
-    D --> P2["Process 2"]
+    E --> P0["Process 0 - Rows 1–3"]
+    E --> P1["Process 1 - Rows 4–6"]
+    E --> P2["Process 2 - Rows 7–9"]
 
     P0 <--> P1
     P1 <--> P2
@@ -62,21 +64,21 @@ flowchart TD
     L1 --> G
     L2 --> G
 
-    G --> O["Final Convolution Matrix"]
+    G --> O["Final 9 × 4 Convolution Matrix"]
     O --> V["Sequential Validation"]
 ```
 
 ### Process Distribution
 
-For a 6 × 4 input matrix:
+For a 9 × 4 input matrix:
 
 | MPI Process | Assigned Rows | Workload |
 |---|---|---|
-| Rank 0 | 0–1 | Local convolution |
-| Rank 1 | 2–3 | Local convolution |
-| Rank 2 | 4–5 | Local convolution |
+| Rank 0 | 0–2 | 3 rows |
+| Rank 1 | 3–5 | 3 rows |
+| Rank 2 | 6–8 | 3 rows |
 
-Each process receives two rows of the original matrix.
+Each process receives three rows of the original matrix.
 
 ---
 
@@ -101,10 +103,13 @@ rank = comm.Get_rank()
 
 Process 0 initializes the input matrix and convolution kernel.
 
-**Input Matrix**
+**Input Matrix (9 × 4)**
 
 ```python
 img = np.array([
+    [3, 9, 5, 9],
+    [1, 7, 4, 3],
+    [2, 1, 6, 5],
     [3, 9, 5, 9],
     [1, 7, 4, 3],
     [2, 1, 6, 5],
@@ -114,7 +119,7 @@ img = np.array([
 ])
 ```
 
-**Convolution Kernel**
+**Convolution Kernel (3 × 3)**
 
 ```python
 kernel = np.array([
@@ -150,7 +155,7 @@ recvbuf = np.empty(
 comm.Scatter(sendbuf, recvbuf, root=0)
 ```
 
-**Purpose:** Divide the input workload across three processes.
+**Purpose:** Divide the input workload equally across three processes, with each process receiving three rows.
 
 ### Module 5 — Boundary Exchange
 
@@ -169,7 +174,7 @@ Zero padding is applied at the outer boundaries of the original matrix.
 
 ### Module 6 — Local Convolution
 
-Each process executes `convolve_func()` using its local matrix rows, kernel, and exchanged boundary rows.
+Each process executes the provided `convolve_func()` using its local matrix rows, kernel, and exchanged boundary rows.
 
 ```python
 local_conv = convolve_func(
@@ -195,6 +200,10 @@ comm.Gather(local_conv, gathered, root=0)
 
 The resulting flattened array is reshaped into the original matrix dimensions.
 
+```python
+recvbuf = gathered.reshape(DIMx, DIMy)
+```
+
 ### Module 8 — Sequential Validation
 
 The sequential implementation is executed on Process 0 and compared against the parallel result.
@@ -203,7 +212,7 @@ The sequential implementation is executed on Process 0 and compared against the 
 np.array_equal(conv1, recvbuf)
 ```
 
-**Purpose:** Verify computational correctness.
+**Purpose:** Verify computational correctness by comparing sequential and parallel convolution outputs.
 
 ---
 
@@ -221,36 +230,44 @@ np.array_equal(conv1, recvbuf)
 
 ## 05 | Experimental Results
 
-**Test Configuration**
+### Test Configuration
 
 | Parameter | Value |
 |---|---:|
-| Input dimensions | 6 × 4 |
+| Input dimensions | 9 × 4 |
 | Kernel dimensions | 3 × 3 |
 | MPI processes | 3 |
-| Rows per process | 2 |
-| Output dimensions | 6 × 4 |
+| Rows per process | 3 |
+| Elements per process | 12 |
+| Gathered elements | 36 |
+| Output dimensions | 9 × 4 |
 
 ### Sequential Output
 
 ```text
-[[-1 -7 -4 -3]
- [ 1  8 -1  4]
- [-2 -2 -1 -6]
- [ 1 -6  2  2]
- [ 1  8 -1  4]
- [ 1  7  4  3]]
+[[20 29 37 21]
+ [23 38 49 32]
+ [23 38 49 32]
+ [23 38 49 32]
+ [23 38 49 32]
+ [23 38 49 32]
+ [23 38 49 32]
+ [23 38 49 32]
+ [11 21 26 18]]
 ```
 
 ### Parallel Output
 
 ```text
-[[-1 -7 -4 -3]
- [ 1  8 -1  4]
- [-2 -2 -1 -6]
- [ 1 -6  2  2]
- [ 1  8 -1  4]
- [ 1  7  4  3]]
+[[20 29 37 21]
+ [23 38 49 32]
+ [23 38 49 32]
+ [23 38 49 32]
+ [23 38 49 32]
+ [23 38 49 32]
+ [23 38 49 32]
+ [23 38 49 32]
+ [11 21 26 18]]
 ```
 
 ### Validation
@@ -263,7 +280,7 @@ np.array_equal(conv1, recvbuf)
 Outputs match: True
 ```
 
-The sequential and parallel implementations produce identical results for the supplied test case.
+The sequential and parallel implementations produce identical results for the supplied 9 × 4 test case.
 
 ---
 
@@ -272,7 +289,7 @@ The sequential and parallel implementations produce identical results for the su
 ### Prerequisites
 
 - Anaconda
-- Python 3
+- Python 3.11
 - Jupyter Notebook
 - IPython
 - mpi4py
@@ -302,8 +319,10 @@ conda install numpy
 **Ubuntu / macOS**
 
 ```bash
-ipcluster start -n 3 --engines=MPIEngineSetLauncher & jupyter notebook
+ipcluster start -n 3 --engines=mpi
 ```
+
+Wait until all three engines successfully register with the controller.
 
 **Windows (Anaconda Prompt)**
 
@@ -317,7 +336,7 @@ Wait until the engines report:
 Engines appear to have started successfully
 ```
 
-Then launch Jupyter Notebook:
+Then launch Jupyter Notebook in another terminal:
 
 ```bash
 jupyter notebook
@@ -325,7 +344,7 @@ jupyter notebook
 
 ### Step 4 — Connect to IPython Cluster
 
-For Ubuntu / macOS:
+**Ubuntu / macOS**
 
 ```python
 from ipyparallel import Client
@@ -336,7 +355,7 @@ clients.block = True
 print(clients.ids)
 ```
 
-For Windows:
+**Windows**
 
 ```python
 from ipyparallel import Client
@@ -406,4 +425,3 @@ The starter notebook is optional and should only be included if uploaded.
   <br/><br/>
   <sub>Distributed Computing · Parallel Algorithms · Matrix Convolution</sub>
 </p>
-
